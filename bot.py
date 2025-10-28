@@ -88,7 +88,7 @@ HELP_TEXT = (
     "После завершения бот пришлёт итог и Excel-файл."
 )
 
-@dp.message_handler(commands=[\"start\"])
+@dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
     await message.answer(\"Привет! Я бот-отчётчик.\n\" + HELP_TEXT)
 
