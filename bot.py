@@ -90,34 +90,34 @@ HELP_TEXT = (
 
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
-    await message.answer(\"Привет! Я бот-отчётчик.\n\" + HELP_TEXT)
+    await message.answer("Привет! Я бот-отчётчик.\n" + HELP_TEXT)
 
-@dp.message_handler(commands=[\"help\"])
+@dp.message_handler(commands=["help"])
 async def cmd_help(message: types.Message):
     await message.answer(HELP_TEXT)
 
-@dp.message_handler(commands=[\"cancel\"], state=\"*\")
+@dp.message_handler(commands=["cancel"], state="*")
 async def cmd_cancel(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     USERS.pop(user_id, None)
     await state.finish()
-    await message.answer(\"Ввод отменён. Для начала заново — /start_report\")
+    await message.answer("Ввод отменён. Для начала заново — /start_report")
 
-@dp.message_handler(commands=[\"start_report\"])
+@dp.message_handler(commands=["start_report"])
 async def cmd_start_report(message: types.Message):
     user_id = message.from_user.id
-    USERS[user_id] = {\"idx\": 0, \"step\": \"morning\", \"rows\": {}}
+    USERS[user_id] = {"idx": 0, "step": "morning", "rows": {}}
     for name, price in PRODUCTS:
-        USERS[user_id][\"rows\"][name] = {\"price\": price, \"morning\": 0.0, \"evening\": 0.0, \"exchange\": 0.0}
+        USERS[user_id]["rows"][name] = {"price": price, "morning": 0.0, "evening": 0.0, "exchange": 0.0}
     await Form.filling.set()
     name, price = PRODUCTS[0]
     await message.answer(
-        f\"Начинаем отчёт.\n\nПозиция 1/{len(PRODUCTS)}:\n{name} — {price} тг\n\"
-        f\"Введите количество полученное утром (или 'пропустить').\"
+        f"Начинаем отчёт.\n\nПозиция 1/{len(PRODUCTS)}:\n{name} — {price} тг\n"
+        f"Введите количество полученное утром (или 'пропустить')."
     )
 
 def parse_quantity(text: str):
-    text = text.strip().replace(\",\", \".\")
+    text = text.strip().replace(",", ".")
     try:
         return float(text)
     except:
@@ -127,99 +127,99 @@ def parse_quantity(text: str):
 async def filling_handler(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     if user_id not in USERS:
-        await message.answer(\"Сессия не найдена. Напиши /start_report.\")
+        await message.answer("Сессия не найдена. Напиши /start_report.")
         await state.finish()
         return
 
     data = USERS[user_id]
-    idx = data[\"idx"]
-    step = data[\"step"]
+    idx = data["idx"]
+    step = data["step"]
     name, price = PRODUCTS[idx]
 
     text = message.text.strip().lower()
 
     # пропуск позиции
-    if text in (\"пропустить\", \"skip\"):
-        data[\"idx\"] += 1
-        data[\"step\"] = \"morning\"
-        if data[\"idx\"] >= len(PRODUCTS):
+    if text in ("пропустить", "skip"):
+        data["idx"] += 1
+        data["step"] = "morning"
+        if data["idx"] >= len(PRODUCTS):
             await state.finish()
-            await send_report_and_excel(message, data[\"rows\"])
+            await send_report_and_excel(message, data["rows"])
             USERS.pop(user_id, None)
             return
-        next_name, next_price = PRODUCTS[data[\"idx\"]]
-        await message.answer(f\"Позиция {data['idx']+1}/{len(PRODUCTS)}:\n{next_name} — {next_price} тг\nВведите количество полученное утром (или 'пропустить').\")
+        next_name, next_price = PRODUCTS[data["idx"]]
+        await message.answer(f"Позиция {data['idx']+1}/{len(PRODUCTS)}:\n{next_name} — {next_price} тг\nВведите количество полученное утром (или 'пропустить').")
         return
 
     qty = parse_quantity(text)
     if qty is None:
-        await message.answer(\"Введи число (например 5) или 'пропустить'.\")
+        await message.answer("Введи число (например 5) или 'пропустить'.")
         return
 
-    if step == \"morning\":
-        data[\"rows\"][name][\"morning\"] = qty
-        data[\"step\"] = \"evening\"
-        await message.answer(f\"{name} — утром {qty}. Теперь введи остаток (вечером).\")
+    if step == "morning":
+        data["rows"][name]["morning"] = qty
+        data["step"] = "evening"
+        await message.answer(f"{name} — утром {qty}. Теперь введи остаток (вечером).")
         return
-    elif step == \"evening\":
-        data[\"rows\"][name][\"evening\"] = qty
+    elif step == "evening":
+        data["rows"][name]["evening"] = qty
         if name in EXCHANGE_REQUIRED:
-            data[\"step\"] = \"exchange\"
-            await message.answer(f\"{name} — остаток {qty}. Введи обмен (или 0, если не было).\")
+            data["step"] = "exchange"
+            await message.answer(f"{name} — остаток {qty}. Введи обмен (или 0, если не было).")
             return
         else:
-            data[\"idx\"] += 1
-            data[\"step\"] = \"morning\"
-    elif step == \"exchange\":
-        data[\"rows\"][name][\"exchange\"] = qty
-        data[\"idx\"] += 1
-        data[\"step\"] = \"morning\"
+            data["idx"] += 1
+            data["step"] = "morning"
+    elif step == "exchange":
+        data["rows"][name]["exchange"] = qty
+        data["idx"] += 1
+        data["step"] = "morning"
 
-    if data[\"idx\"] >= len(PRODUCTS):
+    if data["idx"] >= len(PRODUCTS):
         await state.finish()
-        await send_report_and_excel(message, data[\"rows\"])
+        await send_report_and_excel(message, data["rows"])
         USERS.pop(user_id, None)
         return
-    next_name, next_price = PRODUCTS[data[\"idx\"]]
-    await message.answer(f\"Позиция {data['idx']+1}/{len(PRODUCTS)}:\n{next_name} — {next_price} тг\nВведите количество полученное утром (или 'пропустить').\")
+    next_name, next_price = PRODUCTS[data["idx"]]
+    await message.answer(f"Позиция {data['idx']+1}/{len(PRODUCTS)}:\n{next_name} — {next_price} тг\nВведите количество полученное утром (или 'пропустить').")
 
 async def send_report_and_excel(message: types.Message, rows: dict):
     total_to_cash = 0.0
     lines = []
-    header = [\"Товар\", \"Цена (тг)\", \"Утро\", \"Остаток\", \"Обмен\", \"Продано\", \"Сумма (тг)\"]
+    header = ["Товар", "Цена (тг)", "Утро", "Остаток", "Обмен", "Продано", "Сумма (тг)"]
 
     for name, info in rows.items():
-        p, m, e, x = info[\"price\"], info[\"morning\"], info[\"evening\"], info[\"exchange\"]
+        p, m, e, x = info["price"], info["morning"], info["evening"], info["exchange"]
         sold = m - e - x
         amount = sold * p
         total_to_cash += amount
         lines.append((name, p, m, e, x, sold, amount))
 
     # Markdown table (monospace block) for Telegram
-    header_line = f\"| {'Товар':40} | {'Продано':>7} | {'Сумма':>12} |\"
+    header_line = f"| {'Товар':40} | {'Продано':>7} | {'Сумма':>12} |"
     sep = '|' + '-'*42 + '|' + '-'*9 + '|' + '-'*14 + '|'
     text_lines = []
-    text_lines.append(f\"📅 *Отчёт за {datetime.now().strftime('%Y-%m-%d %H:%M')}*\")
+    text_lines.append(f"📅 *Отчёт за {datetime.now().strftime('%Y-%m-%d %H:%M')}*")
     text_lines.append('')
     text_lines.append('```')
     text_lines.append(header_line)
     text_lines.append(sep)
     for name, p, m, e, x, sold, amount in lines:
-        sold_display = f\"{sold:.0f}\" if abs(sold - round(sold)) < 1e-6 else f\"{sold:.2f}\"
-        amount_display = f\"{amount:,.0f} тг\"
+        sold_display = f"{sold:.0f}" if abs(sold - round(sold)) < 1e-6 else f"{sold:.2f}"
+        amount_display = f"{amount:,.0f} тг"
         short_name = (name[:40]).ljust(40)
-        text_lines.append(f\"| {short_name} | {sold_display:>7} | {amount_display:>12} |\")
+        text_lines.append(f"| {short_name} | {sold_display:>7} | {amount_display:>12} |")
     text_lines.append('```')
-    text_lines.append(f\"💰 *Итого к сдаче:* {total_to_cash:,.0f} тг\")
+    text_lines.append(f"💰 *Итого к сдаче:* {total_to_cash:,.0f} тг")
 
     await message.answer('\\n'.join(text_lines), parse_mode=types.ParseMode.MARKDOWN)
 
     # Excel creation
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = \"Отчёт\"
-    ws.merge_cells(\"A1:G1\")
-    ws[\"A1\"] = f\"Отчёт торгового представителя — {datetime.now().strftime('%Y-%m-%d %H:%M')}\"
+    ws.title = "Отчёт"
+    ws.merge_cells("A1:G1")
+    ws["A1"] = f"Отчёт торгового представителя — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     for col_idx, h in enumerate(header, start=1):
         ws.cell(row=2, column=col_idx, value=h)
 
@@ -234,7 +234,7 @@ async def send_report_and_excel(message: types.Message, rows: dict):
         ws.cell(row=row_num, column=7, value=amount)
         row_num += 1
 
-    ws.cell(row=row_num, column=6, value=\"Итого:\")
+    ws.cell(row=row_num, column=6, value="Итого:")
     ws.cell(row=row_num, column=7, value=total_to_cash)
 
     for col in ws.columns:
@@ -244,15 +244,15 @@ async def send_report_and_excel(message: types.Message, rows: dict):
             try:
                 val = str(cell.value)
             except:
-                val = \"\"
+                val = ""
             if val is None:
-                val = \"\"
+                val = ""
             if len(val) > max_length:
                 max_length = len(val)
         adjusted_width = (max_length + 2)
         ws.column_dimensions[col_letter].width = adjusted_width
 
-    filename = f\"report_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx\"
+    filename = f"report_{message.from_user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     wb.save(filename)
 
     try:
